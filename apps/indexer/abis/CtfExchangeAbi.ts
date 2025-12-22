@@ -9,5 +9,17 @@ export const CtfExchangeAbi = [
         ],
         "name": "ConditionPreparation",
         "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            { "indexed": true, "internalType": "bytes32", "name": "conditionId", "type": "bytes32" },
+            { "indexed": true, "internalType": "address", "name": "oracle", "type": "address" },
+            { "indexed": true, "internalType": "bytes32", "name": "questionId", "type": "bytes32" },
+            { "indexed": false, "internalType": "uint256", "name": "outcomeSlotCount", "type": "uint256" },
+            { "indexed": false, "internalType": "uint256[]", "name": "payoutNumerators", "type": "uint256[]" }
+        ],
+        "name": "ConditionResolution",
+        "type": "event"
     }
 ] as const;

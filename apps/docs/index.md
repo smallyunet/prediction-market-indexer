@@ -15,19 +15,45 @@ hero:
 
 features:
   - title: Fast Indexing
-    details: Powered by Ponder for type-safe, high-speed EVM data indexing.
+    details: Powered by Ponder for type-safe, high-speed EVM data indexing using optimized RPC calls.
   - title: SQL Analytics
-    details: Query your data with standard SQL via PostgreSQL. No GraphQL limit.
+    details: Query your data with standard SQL via PostgreSQL. No GraphQL limitations.
   - title: REST API
     details: Zero-config Hono API ready to serve rich analytics to your frontend.
 ---
 
 # Overview
 
-This project provides a robust backend infrastructure for Prediction Market applications.
+This project provides a robust backend infrastructure for Prediction Market applications, indexing the Gnosis Conditional Tokens Framework (CTF).
 
 ## Key Features
 
-- **Multi-Chain Support**: Configured for Polygon Mainnet (CTF Exchange).
-- **Core Models**: Markets, Positions, Outcomes, UserStats.
+- **Multi-Chain Support**: Configured for Polygon Mainnet.
+- **Core Models**: Markets, Outcomes, Positions, UserStats.
 - **Dockerized**: Ready to deploy with `docker-compose`.
+
+## Quick Start
+
+### 1. Installation
+
+```bash
+pnpm install
+```
+
+### 2. Start Database
+
+```bash
+docker-compose up -d
+```
+
+### 3. Run Services
+
+```bash
+# Terminal 1: Indexer
+cd apps/indexer && pnpm dev
+
+# Terminal 2: API
+cd apps/api && pnpm dev
+```
+
+Visit `http://localhost:3000/markets` to see the API in action.
