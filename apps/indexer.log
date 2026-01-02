@@ -1,0 +1,26 @@
+
+> indexer@ start /Users/smallyu/work/side-project/prediction-market-indexer/apps/indexer
+> ponder start
+
+Failed to find Response internal state key
+11:04:45 AM DEBUG app        Started using config file: ponder.config.ts
+11:04:46 AM INFO  build      Using Postgres database 127.0.0.1:5432/ponder (from DATABASE_URL env var)
+11:04:46 AM WARN  build      Network 'polygon' is using a public RPC URL (http://127.0.0.1:8545). Most apps require an RPC URL with a higher rate limit.
+11:04:46 AM DEBUG build      Completed build with ID '26e0a04917' (hash of project file contents)
+11:04:46 AM DEBUG build      Killed build service
+11:04:46 AM ERROR process    Caught uncaughtException event
+Error: connect ECONNREFUSED 127.0.0.1:5432
+    at /Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/pg-pool@3.10.1_pg@8.16.3/node_modules/pg-pool/index.js:45:11
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at PostgresDriver.acquireConnection (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/kysely@0.26.3/node_modules/kysely/dist/esm/dialect/postgres/postgres-driver.js:19:24)
+    at RuntimeDriver.acquireConnection (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/kysely@0.26.3/node_modules/kysely/dist/esm/driver/runtime-driver.js:44:28)
+    at DefaultConnectionProvider.provideConnection (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/kysely@0.26.3/node_modules/kysely/dist/esm/driver/default-connection-provider.js:8:28)
+    at DefaultQueryExecutor.executeQuery (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/kysely@0.26.3/node_modules/kysely/dist/esm/query-executor/query-executor-base.js:34:16)
+    at SelectQueryBuilderImpl.execute (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/kysely@0.26.3/node_modules/kysely/dist/esm/query-builder/select-query-builder.js:293:24)
+    at SelectQueryBuilderImpl.executeTakeFirst (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/kysely@0.26.3/node_modules/kysely/dist/esm/query-builder/select-query-builder.js:297:26)
+    at Object.setup (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/@ponder+core@0.7.17_@opentelemetry+api@1.9.0_@types+node@20.19.27_@types+pg@8.16.0_hono@4.11._r534icidgclcgt7sewii7wcnpy/node_modules/@ponder/core/src/database/index.ts:487:31)
+    at run (file:///Users/smallyu/work/side-project/prediction-market-indexer/node_modules/.pnpm/@ponder+core@0.7.17_@opentelemetry+api@1.9.0_@types+node@20.19.27_@types+pg@8.16.0_hono@4.11._r534icidgclcgt7sewii7wcnpy/node_modules/@ponder/core/src/bin/utils/run.ts:46:45)
+11:04:46 AM WARN  process    Received uncaughtException, starting shutdown sequence
+11:04:46 AM DEBUG database   Closed connection to database
+11:04:46 AM FATAL process    Finished shutdown sequence, terminating (exit code 1)
+ ELIFECYCLE  Command failed with exit code 1.

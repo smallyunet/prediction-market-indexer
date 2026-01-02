@@ -8,8 +8,9 @@
     },
     "dependencies": {
         "@ponder/core": "^0.7.17",
-        "viem": "^2.21.0",
-        "graphql": "^16.8.0"
+        "graphql": "^16.8.0",
+        "hono": "^4.0.0",
+        "viem": "^2.21.0"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

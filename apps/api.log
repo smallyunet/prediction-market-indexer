@@ -1,0 +1,6 @@
+
+> api@ dev /Users/smallyu/work/side-project/prediction-market-indexer/apps/api
+> tsx watch src/index.ts
+
+Server is running on port 3001
+ ELIFECYCLE  Command failed with exit code 15.
