@@ -37,6 +37,40 @@ app.get('/markets', async (c) => {
     }
 });
 
+app.get('/users/:id', async (c) => {
+    const userId = c.req.param('id');
+    try {
+        const userResult = await pool.query('SELECT * FROM "UserStats" WHERE "id" = $1', [userId]);
+        const user = userResult.rows[0];
+
+        if (!user) {
+            return c.json({ success: false, error: 'User not found' }, 404);
+        }
+
+        const positionsResult = await pool.query(`
+            SELECT p.*, o.name as "outcomeName", m.title as "marketTitle", m.id as "marketId"
+            FROM "Position" p
+            JOIN "Outcome" o ON p."outcomeId" = o.id
+            JOIN "Market" m ON o."marketId" = m.id
+            WHERE p."userId" = $1
+        `, [userId]);
+
+        return c.json({
+            success: true,
+            data: {
+                stats: user,
+                positions: positionsResult.rows
+            }
+        });
+    } catch (error: any) {
+        console.error('Error fetching user:', error);
+        return c.json({
+            success: false,
+            error: error.message
+        }, 500);
+    }
+});
+
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 console.log(`Server is running on port ${port}`);
 

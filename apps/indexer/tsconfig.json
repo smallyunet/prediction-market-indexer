@@ -2,11 +2,20 @@
     "extends": "../../packages/tsconfig/base.json",
     "compilerOptions": {
         "module": "NodeNext",
-        "moduleResolution": "NodeNext"
+        "moduleResolution": "NodeNext",
+        "paths": {
+            "@/generated": [
+                "./generated"
+            ],
+            "@/*": [
+                "./src/*"
+            ]
+        }
     },
     "include": [
         "src",
         "ponder.config.ts",
-        "ponder.schema.ts"
+        "ponder.schema.ts",
+        "generated"
     ]
 }
