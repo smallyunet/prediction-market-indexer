@@ -1,4 +1,4 @@
-import { onchainTable, text, integer, bigint, boolean, doublePrecision, relations } from "@ponder/core";
+import { onchainTable, relations } from "@ponder/core";
 
 export const Market = onchainTable("Market", (t) => ({
     id: t.text().primaryKey(), // Condition ID
@@ -9,16 +9,14 @@ export const Market = onchainTable("Market", (t) => ({
     title: t.text(),
     collateralToken: t.text(),
     minSplits: t.bigint(),
-    // Arrays not directly supported in all adapters, using simple text match or specific array type if available. 
-    // Assuming .array() is not available, skipping arrays or using json for simplicity if needed.
-    // But Ponder 0.7 usually supports scalar arrays for postgres. 
-    // Will try to use .isArray() if it exists or just json. 
-    // Exports showed 'json'. Let's use json for arrays to be safe.
     splitFrom: t.json(),
     splitTo: t.json(),
     createdAt: t.bigint().notNull(),
     resolved: t.boolean(),
     payouts: t.json(), // bigint array as json
+    // v0.0.4: Resolution metadata
+    resolvedAt: t.bigint(),
+    winningOutcomeIndex: t.integer(),
 }));
 
 export const Outcome = onchainTable("Outcome", (t) => ({
@@ -35,18 +33,38 @@ export const Position = onchainTable("Position", (t) => ({
     outcomeId: t.text().notNull(),
     shares: t.bigint().notNull(),
     avgPrice: t.doublePrecision(),
+    // v0.0.4: Track cost basis for PnL calculation
+    costBasis: t.bigint(),
 }));
 
 export const UserStats = onchainTable("UserStats", (t) => ({
     id: t.text().primaryKey(), // Wallet Address
     totalVolume: t.bigint().notNull(),
     totalPnL: t.doublePrecision(),
+    realizedPnL: t.doublePrecision(), // v0.0.4: Confirmed P&L from redemptions
     winRate: t.doublePrecision(),
     tradeCount: t.integer().notNull(),
+    winCount: t.integer().notNull(),  // v0.0.4: Number of profitable redemptions
+    lossCount: t.integer().notNull(), // v0.0.4: Number of unprofitable redemptions
+}));
+
+// v0.0.4: New Trade table for tracking individual trades
+export const Trade = onchainTable("Trade", (t) => ({
+    id: t.text().primaryKey(),           // txHash-logIndex
+    userId: t.text().notNull(),
+    marketId: t.text().notNull(),
+    outcomeIndex: t.integer().notNull(),
+    type: t.text().notNull(),            // "SPLIT" | "MERGE" | "REDEMPTION"
+    shares: t.bigint().notNull(),
+    collateralAmount: t.bigint().notNull(),
+    pricePerShare: t.doublePrecision(),  // collateralAmount / shares
+    pnl: t.doublePrecision(),            // Only populated for REDEMPTION type
+    timestamp: t.bigint().notNull(),
 }));
 
 export const MarketRelations = relations(Market, ({ many }) => ({
     outcomes: many(Outcome),
+    trades: many(Trade),
 }));
 
 export const OutcomeRelations = relations(Outcome, ({ one, many }) => ({
@@ -61,4 +79,10 @@ export const PositionRelations = relations(Position, ({ one }) => ({
 
 export const UserStatsRelations = relations(UserStats, ({ many }) => ({
     positions: many(Position),
+    trades: many(Trade),
+}));
+
+export const TradeRelations = relations(Trade, ({ one }) => ({
+    user: one(UserStats, { fields: [Trade.userId], references: [UserStats.id] }),
+    market: one(Market, { fields: [Trade.marketId], references: [Market.id] }),
 }));
