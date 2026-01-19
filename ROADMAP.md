@@ -25,9 +25,14 @@
 - [x] **API**: Pagination support (page, limit).
 - [x] **API**: New `GET /markets/:id` endpoint for single market details.
 
-## v0.0.5 - Enhanced Analytics (Next)
-- [ ] **Indexer**: Track market volume and liquidity metrics.
-- [ ] **API**: Leaderboard endpoint for top traders by PnL/WinRate.
-- [ ] **API**: Market statistics aggregation (daily/weekly volumes).
-- [ ] **Docs**: API documentation with OpenAPI/Swagger.
+## v0.0.5 - Enhanced Analytics (Completed)
+- [x] **Indexer**: Track market volume and liquidity metrics.
+- [x] **API**: Leaderboard endpoint for top traders by PnL/WinRate.
+- [x] **API**: Market statistics aggregation (daily/weekly volumes).
+- [x] **Docs**: API documentation with OpenAPI/Swagger.
 
+## v0.0.6 - Advanced Features (Next)
+- [ ] **Indexer**: Track order book depth and liquidity providers.
+- [ ] **API**: Historical price charts for outcomes.
+- [ ] **API**: WebSocket support for real-time updates.
+- [ ] **Docs**: Comprehensive user guides and tutorials.

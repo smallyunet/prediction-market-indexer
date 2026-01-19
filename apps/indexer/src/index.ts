@@ -56,6 +56,9 @@ ponder.on("CtfExchange:ConditionPreparation", async ({ event, context }) => {
         splitTo: [],
         resolvedAt: null,
         winningOutcomeIndex: null,
+        // v0.0.5: Initialize volume metrics
+        totalVolume: 0n,
+        tradeCount: 0,
     });
 
     // Create Outcomes
@@ -79,9 +82,14 @@ ponder.on("CtfExchange:PositionSplit", async ({ event, context }) => {
         where: eq(Market.id, conditionId)
     });
 
-    if (market && !market.collateralToken) {
+    if (market) {
+        // Update collateral token if not set, and always increment volume metrics
         await context.db.update(Market)
-            .set({ collateralToken: collateralToken })
+            .set({
+                collateralToken: market.collateralToken || collateralToken,
+                totalVolume: (market.totalVolume || 0n) + amount,
+                tradeCount: (market.tradeCount || 0) + partition.length,
+            })
             .where(eq(Market.id, conditionId));
     }
 
@@ -160,6 +168,19 @@ ponder.on("CtfExchange:PositionMerge", async ({ event, context }) => {
     await context.db.update(UserStats)
         .set({ tradeCount: user.tradeCount + 1 })
         .where(eq(UserStats.id, stakeholder));
+
+    // v0.0.5: Update market volume metrics
+    const market = await context.db.query.Market.findFirst({
+        where: eq(Market.id, conditionId)
+    });
+    if (market) {
+        await context.db.update(Market)
+            .set({
+                totalVolume: (market.totalVolume || 0n) + amount,
+                tradeCount: (market.tradeCount || 0) + partition.length,
+            })
+            .where(eq(Market.id, conditionId));
+    }
 
     for (const indexSet of partition) {
         const val = Number(indexSet);

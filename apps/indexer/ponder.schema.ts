@@ -17,6 +17,9 @@ export const Market = onchainTable("Market", (t) => ({
     // v0.0.4: Resolution metadata
     resolvedAt: t.bigint(),
     winningOutcomeIndex: t.integer(),
+    // v0.0.5: Volume and liquidity metrics
+    totalVolume: t.bigint(),
+    tradeCount: t.integer(),
 }));
 
 export const Outcome = onchainTable("Outcome", (t) => ({

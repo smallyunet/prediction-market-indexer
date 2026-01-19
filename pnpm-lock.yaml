@@ -20,6 +20,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@hono/swagger-ui':
+        specifier: ^0.5.1
+        version: 0.5.3(hono@4.11.1)
       hono:
         specifier: ^4.0.0
         version: 4.11.1
@@ -741,6 +744,11 @@ packages:
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
+
+  '@hono/swagger-ui@0.5.3':
+    resolution: {integrity: sha512-Hn90DOOJ62ICJQplQvCDVpi9Jcn6EhtRaiffyJIS53wA5RmRLtMCDQGVc0bor8vQD7JIwpkweWjs+3cycp+IvA==}
+    peerDependencies:
+      hono: '>=4.0.0'
 
   '@iconify-json/simple-icons@1.2.63':
     resolution: {integrity: sha512-xZl2UWCwE58VlqZ+pDPmaUhE2tq8MVSTJRr4/9nzzHlDdjJ0Ud1VxNXPrwTSgESKY29iCQw3S0r2nJTSNNngHw==}
@@ -3245,6 +3253,10 @@ snapshots:
       tslib: 2.8.1
 
   '@hono/node-server@1.13.3(hono@4.11.1)':
+    dependencies:
+      hono: 4.11.1
+
+  '@hono/swagger-ui@0.5.3(hono@4.11.1)':
     dependencies:
       hono: 4.11.1
 
