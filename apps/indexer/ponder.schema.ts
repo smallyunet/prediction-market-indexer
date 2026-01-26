@@ -20,6 +20,9 @@ export const Market = onchainTable("Market", (t) => ({
     // v0.0.5: Volume and liquidity metrics
     totalVolume: t.bigint(),
     tradeCount: t.integer(),
+    // v0.0.6: Derived depth + open interest (approx)
+    openInterest: t.bigint(),
+    openInterestByOutcome: t.json(), // bigint array as json
 }));
 
 export const Outcome = onchainTable("Outcome", (t) => ({
@@ -65,9 +68,55 @@ export const Trade = onchainTable("Trade", (t) => ({
     timestamp: t.bigint().notNull(),
 }));
 
+// v0.0.6: Historical outcome price points (derived from open interest distribution)
+export const OutcomePricePoint = onchainTable("OutcomePricePoint", (t) => ({
+    id: t.text().primaryKey(), // txHash-logIndex-outcomeIndex
+    marketId: t.text().notNull(),
+    outcomeIndex: t.integer().notNull(),
+    price: t.doublePrecision().notNull(),
+    liquidityShares: t.bigint(),
+    timestamp: t.bigint().notNull(),
+}));
+
+// v0.0.6: Market depth snapshots (derived)
+export const MarketDepthSnapshot = onchainTable("MarketDepthSnapshot", (t) => ({
+    id: t.text().primaryKey(), // txHash-logIndex
+    marketId: t.text().notNull(),
+    totalShares: t.bigint().notNull(),
+    sharesByOutcome: t.json().notNull(), // bigint array as json
+    timestamp: t.bigint().notNull(),
+}));
+
+// v0.0.6: Liquidity providers (derived from split/merge collateral flows)
+export const LiquidityProvider = onchainTable("LiquidityProvider", (t) => ({
+    id: t.text().primaryKey(), // marketId-userId
+    marketId: t.text().notNull(),
+    userId: t.text().notNull(),
+    provided: t.bigint().notNull(),
+    removed: t.bigint().notNull(),
+    netLiquidity: t.bigint().notNull(),
+    lastUpdatedAt: t.bigint().notNull(),
+}));
+
 export const MarketRelations = relations(Market, ({ many }) => ({
     outcomes: many(Outcome),
     trades: many(Trade),
+    pricePoints: many(OutcomePricePoint),
+    depthSnapshots: many(MarketDepthSnapshot),
+    liquidityProviders: many(LiquidityProvider),
+}));
+
+export const OutcomePricePointRelations = relations(OutcomePricePoint, ({ one }) => ({
+    market: one(Market, { fields: [OutcomePricePoint.marketId], references: [Market.id] }),
+}));
+
+export const MarketDepthSnapshotRelations = relations(MarketDepthSnapshot, ({ one }) => ({
+    market: one(Market, { fields: [MarketDepthSnapshot.marketId], references: [Market.id] }),
+}));
+
+export const LiquidityProviderRelations = relations(LiquidityProvider, ({ one }) => ({
+    market: one(Market, { fields: [LiquidityProvider.marketId], references: [Market.id] }),
+    user: one(UserStats, { fields: [LiquidityProvider.userId], references: [UserStats.id] }),
 }));
 
 export const OutcomeRelations = relations(Outcome, ({ one, many }) => ({
@@ -83,6 +132,7 @@ export const PositionRelations = relations(Position, ({ one }) => ({
 export const UserStatsRelations = relations(UserStats, ({ many }) => ({
     positions: many(Position),
     trades: many(Trade),
+    liquidity: many(LiquidityProvider),
 }));
 
 export const TradeRelations = relations(Trade, ({ one }) => ({

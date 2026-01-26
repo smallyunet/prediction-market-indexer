@@ -4,9 +4,6 @@
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "paths": {
-            "@/generated": [
-                "./generated"
-            ],
             "@/*": [
                 "./src/*"
             ]
@@ -16,6 +13,7 @@
         "src",
         "ponder.config.ts",
         "ponder.schema.ts",
+        "ponder-env.d.ts",
         "generated"
     ]
 }

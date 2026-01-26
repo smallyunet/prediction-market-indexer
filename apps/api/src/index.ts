@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { Pool } from 'pg';
 import { swaggerUI } from '@hono/swagger-ui';
+import { serve } from '@hono/node-server';
+import { createNodeWebSocket } from '@hono/node-ws';
 
 const app = new Hono();
 
@@ -14,7 +16,7 @@ const openApiSpec = {
     openapi: '3.0.0',
     info: {
         title: 'Prediction Market Indexer API',
-        version: '0.0.5',
+        version: '0.0.6',
         description: 'API for querying indexed prediction market data from Polymarket/CTF Exchange'
     },
     servers: [{ url: '/' }],
@@ -63,6 +65,53 @@ const openApiSpec = {
                 responses: { '200': { description: 'Market details with outcomes and stats' }, '404': { description: 'Market not found' } }
             }
         },
+        '/markets/{id}/prices': {
+            get: {
+                summary: 'Historical Outcome Prices',
+                description: 'Get derived historical price points per outcome for a market. Prices are derived from open interest distribution (approx).',
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+                    { name: 'outcomeIndex', in: 'query', schema: { type: 'integer' } },
+                    { name: 'interval', in: 'query', schema: { type: 'string', enum: ['minute', 'hour', 'day'], default: 'hour' } },
+                    { name: 'from', in: 'query', schema: { type: 'string', description: 'ISO date string' } },
+                    { name: 'to', in: 'query', schema: { type: 'string', description: 'ISO date string' } },
+                    { name: 'limit', in: 'query', schema: { type: 'integer', default: 500, maximum: 5000 } }
+                ],
+                responses: { '200': { description: 'Time-series price points' } }
+            }
+        },
+        '/markets/{id}/depth': {
+            get: {
+                summary: 'Market Depth Snapshot',
+                description: 'Get the latest derived depth snapshot (open interest by outcome).',
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+                ],
+                responses: { '200': { description: 'Latest market depth snapshot' }, '404': { description: 'No snapshots found' } }
+            }
+        },
+        '/markets/{id}/liquidity-providers': {
+            get: {
+                summary: 'Liquidity Providers',
+                description: 'List derived liquidity providers for a market, based on split/merge collateral flows.',
+                parameters: [
+                    { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+                    { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 500 } },
+                    { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } }
+                ],
+                responses: { '200': { description: 'Liquidity providers list' } }
+            }
+        },
+        '/ws': {
+            get: {
+                summary: 'WebSocket (real-time)',
+                description: 'WebSocket endpoint for periodic real-time updates. Optional query: marketId',
+                parameters: [
+                    { name: 'marketId', in: 'query', schema: { type: 'string' } }
+                ],
+                responses: { '101': { description: 'Switching Protocols' } }
+            }
+        },
         '/leaderboard': {
             get: {
                 summary: 'Trader Leaderboard',
@@ -87,7 +136,7 @@ const openApiSpec = {
 };
 
 app.get('/', (c) => {
-    return c.json({ message: 'Prediction Market Indexer API v0.0.5' });
+    return c.json({ message: 'Prediction Market Indexer API v0.0.6' });
 });
 
 app.get('/health', (c) => {
@@ -99,6 +148,13 @@ app.get('/openapi.json', (c) => c.json(openApiSpec));
 
 // Swagger UI
 app.get('/docs', swaggerUI({ url: '/openapi.json' }));
+
+function parseIsoToSeconds(value?: string | null): number | null {
+    if (!value) return null;
+    const ms = Date.parse(value);
+    if (Number.isNaN(ms)) return null;
+    return Math.floor(ms / 1000);
+}
 
 // GET /markets - List markets with advanced filtering, sorting, and pagination
 app.get('/markets', async (c) => {
@@ -276,6 +332,120 @@ app.get('/markets/:id', async (c) => {
     }
 });
 
+// GET /markets/:id/prices - Derived outcome price history
+app.get('/markets/:id/prices', async (c) => {
+    const marketId = c.req.param('id');
+    try {
+        const interval = (c.req.query('interval') || 'hour').toLowerCase();
+        const safeUnit = interval === 'minute' ? 'minute' : interval === 'day' ? 'day' : 'hour';
+
+        const outcomeIndexParam = c.req.query('outcomeIndex');
+        const outcomeIndex = outcomeIndexParam != null ? parseInt(outcomeIndexParam, 10) : null;
+        const limit = Math.min(5000, Math.max(1, parseInt(c.req.query('limit') || '500', 10)));
+
+        const from = parseIsoToSeconds(c.req.query('from'));
+        const to = parseIsoToSeconds(c.req.query('to'));
+
+        const params: any[] = [marketId];
+        const where: string[] = ['"marketId" = $1'];
+
+        if (Number.isInteger(outcomeIndex)) {
+            params.push(outcomeIndex);
+            where.push(`"outcomeIndex" = $${params.length}`);
+        }
+        if (from != null) {
+            params.push(from);
+            where.push(`"timestamp" >= $${params.length}`);
+        }
+        if (to != null) {
+            params.push(to);
+            where.push(`"timestamp" <= $${params.length}`);
+        }
+
+        params.push(limit);
+
+        const query = `
+            SELECT
+                date_trunc('${safeUnit}', to_timestamp("timestamp")::timestamp) as bucket,
+                "outcomeIndex",
+                AVG("price") as price,
+                AVG("liquidityShares") as "liquidityShares"
+            FROM "OutcomePricePoint"
+            WHERE ${where.join(' AND ')}
+            GROUP BY 1, 2
+            ORDER BY 1 ASC
+            LIMIT $${params.length}
+        `;
+
+        const result = await pool.query(query, params);
+        return c.json({
+            success: true,
+            data: result.rows,
+            meta: { marketId, interval: safeUnit },
+        });
+    } catch (error: any) {
+        console.error('Error fetching prices:', error);
+        return c.json({ success: false, error: error.message }, 500);
+    }
+});
+
+// GET /markets/:id/depth - Latest derived depth snapshot
+app.get('/markets/:id/depth', async (c) => {
+    const marketId = c.req.param('id');
+    try {
+        const result = await pool.query(
+            'SELECT * FROM "MarketDepthSnapshot" WHERE "marketId" = $1 ORDER BY "timestamp" DESC LIMIT 1',
+            [marketId]
+        );
+        const snapshot = result.rows[0];
+        if (!snapshot) return c.json({ success: false, error: 'No depth snapshots found' }, 404);
+        return c.json({ success: true, data: snapshot });
+    } catch (error: any) {
+        console.error('Error fetching depth:', error);
+        return c.json({ success: false, error: error.message }, 500);
+    }
+});
+
+// GET /markets/:id/liquidity-providers - Derived LP list
+app.get('/markets/:id/liquidity-providers', async (c) => {
+    const marketId = c.req.param('id');
+    try {
+        const limit = Math.min(500, Math.max(1, parseInt(c.req.query('limit') || '50', 10)));
+        const page = Math.max(1, parseInt(c.req.query('page') || '1', 10));
+        const offset = (page - 1) * limit;
+
+        const countResult = await pool.query(
+            'SELECT COUNT(*) as total FROM "LiquidityProvider" WHERE "marketId" = $1',
+            [marketId]
+        );
+        const total = parseInt(countResult.rows[0].total, 10);
+
+        const result = await pool.query(
+            `
+                SELECT * FROM "LiquidityProvider"
+                WHERE "marketId" = $1
+                ORDER BY "netLiquidity" DESC NULLS LAST
+                LIMIT $2 OFFSET $3
+            `,
+            [marketId, limit, offset]
+        );
+
+        return c.json({
+            success: true,
+            data: result.rows,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        });
+    } catch (error: any) {
+        console.error('Error fetching liquidity providers:', error);
+        return c.json({ success: false, error: error.message }, 500);
+    }
+});
+
 // GET /leaderboard - Top traders by PnL or WinRate
 app.get('/leaderboard', async (c) => {
     try {
@@ -387,10 +557,73 @@ app.get('/users/:id', async (c) => {
     }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
-console.log(`Server is running on port ${port}`);
+const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
+const wsSubscriptions = new Map<any, { marketId: string | null }>();
 
-export default {
-    port,
-    fetch: app.fetch,
-};
+app.get(
+    '/ws',
+    upgradeWebSocket((c) => {
+        const marketId = c.req.query('marketId') || null;
+        return {
+            onOpen(_event, ws) {
+                wsSubscriptions.set(ws, { marketId });
+                ws.send(JSON.stringify({ type: 'hello', marketId }));
+            },
+            onMessage(event, ws) {
+                try {
+                    const msg = JSON.parse(typeof event.data === 'string' ? event.data : '');
+                    if (msg?.type === 'subscribe' && typeof msg.marketId === 'string') {
+                        wsSubscriptions.set(ws, { marketId: msg.marketId });
+                        ws.send(JSON.stringify({ type: 'subscribed', marketId: msg.marketId }));
+                    }
+                    if (msg?.type === 'ping') {
+                        ws.send(JSON.stringify({ type: 'pong', t: Date.now() }));
+                    }
+                } catch {
+                    // ignore
+                }
+            },
+            onClose(_event, ws) {
+                wsSubscriptions.delete(ws);
+            },
+        };
+    })
+);
+
+const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const server = serve(
+    {
+        fetch: app.fetch,
+        port,
+    },
+    (info) => {
+        console.log(`Server is running on http://localhost:${info.port}`);
+    }
+);
+
+injectWebSocket(server);
+
+// Periodic real-time push (best-effort): latest prices
+setInterval(async () => {
+    try {
+        if (wsSubscriptions.size === 0) return;
+
+        const latest = await pool.query(`
+            SELECT DISTINCT ON ("marketId", "outcomeIndex")
+                "marketId", "outcomeIndex", "price", "liquidityShares", "timestamp"
+            FROM "OutcomePricePoint"
+            ORDER BY "marketId", "outcomeIndex", "timestamp" DESC
+            LIMIT 500
+        `);
+
+        const rows = latest.rows;
+        for (const [ws, sub] of wsSubscriptions.entries()) {
+            const data = sub.marketId ? rows.filter((r: any) => r.marketId === sub.marketId) : rows;
+            ws.send(JSON.stringify({ type: 'prices:latest', marketId: sub.marketId, data }));
+        }
+    } catch (error) {
+        // keep server alive
+    }
+}, 5000);
+
+export default app;

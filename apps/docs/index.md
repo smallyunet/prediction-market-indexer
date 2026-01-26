@@ -20,6 +20,8 @@ features:
     details: Query your data with standard SQL via PostgreSQL. No GraphQL limitations.
   - title: REST API
     details: Zero-config Hono API ready to serve rich analytics to your frontend.
+  - title: Charts & Realtime
+    details: Derived price charts and a WebSocket endpoint for periodic realtime updates.
   - title: OpenAPI Docs
     details: Interactive API documentation with Swagger UI at /docs endpoint.
 ---

@@ -32,7 +32,7 @@
 - [x] **Docs**: API documentation with OpenAPI/Swagger.
 
 ## v0.0.6 - Advanced Features (Next)
-- [ ] **Indexer**: Track order book depth and liquidity providers.
-- [ ] **API**: Historical price charts for outcomes.
-- [ ] **API**: WebSocket support for real-time updates.
-- [ ] **Docs**: Comprehensive user guides and tutorials.
+- [x] **Indexer**: Track order book depth and liquidity providers (derived).
+- [x] **API**: Historical price charts for outcomes (derived).
+- [x] **API**: WebSocket support for real-time updates.
+- [x] **Docs**: User guide updates and examples.
